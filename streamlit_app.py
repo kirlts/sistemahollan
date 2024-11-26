@@ -84,7 +84,7 @@ def mostrar_servicios():
 
 def generar_id_unico(): return str(uuid.uuid4())
 
-def confirmar_reserva(salon_key, fecha, hora_inicio, hora_fin, servicios_seleccionados, email_cliente, asistentes, tipo_evento, presupuesto_total): 
+def confirmar_reserva(salon_key, fecha, hora_inicio, hora_fin, servicios_seleccionados, email_cliente, asistentes, tipo_evento, presupuesto_total, notas_adicionales): 
 
     # Crea un nuevo ID de reserva
     reserva_id = generar_id_unico()
@@ -107,6 +107,7 @@ def confirmar_reserva(salon_key, fecha, hora_inicio, hora_fin, servicios_selecci
         "servicios": servicios_seleccionados,
         "asistentes": asistentes,
         "tipo_evento": tipo_evento,
+        "notas_adicionales": notas_adicionales,
         "presupuesto": presupuesto_total,
         "pagada": "No"
     })
@@ -269,6 +270,11 @@ else:
                 asistentes = st.number_input("Número de asistentes:", min_value=1, step=1)
                 tipo_evento = st.selectbox("Tipo de evento:", ["Boda", "Cumpleaños", "Corporativo", "Otro"])
 
+                # Agregar campo para notas adicionales
+                notas_adicionales = st.text_area("Notas adicionales:")
+                if not notas_adicionales:  # Si el usuario no escribe nada
+                    notas_adicionales = "Sin detalles adicionales"
+
                 submitted = st.form_submit_button("Ver disponibilidad")
                 if submitted:
                     st.session_state.ver_disponibilidad = True  # Actualizar la variable de estado
@@ -304,7 +310,7 @@ else:
 
                         if st.session_state.salon_seleccionado:  # Mostrar el botón solo si se ha seleccionado un salón
                             if st.button("Confirmar reserva"):
-                                confirmar_reserva(salon_seleccionado_key, fecha, hora_inicio, hora_fin, servicios_seleccionados, st.session_state.user_info.get('email'), asistentes, tipo_evento, presupuesto_total)  # Pasar la clave del salón
+                                confirmar_reserva(salon_seleccionado_key, fecha, hora_inicio, hora_fin, servicios_seleccionados, st.session_state.user_info.get('email'), asistentes, tipo_evento, presupuesto_total, notas_adicionales)  # Pasar la clave del salón
          
                     else:
                         st.warning("No hay salones disponibles para la fecha y hora especificadas.")        
@@ -348,7 +354,8 @@ else:
                             st.write(f"**Tipo de evento:** {reserva['tipo_evento']}")
                             st.write(f"**Servicios:**")
                             for servicio_id, servicio in reserva['servicios'].items():
-                                st.write(f"   - {servicio['nombre']}") 
+                                st.write(f"   - {servicio['nombre']}")
+                            st.write(f"**Notas adicionales:** {reserva['notas_adicionales']}")  # Mostrar las notas adicionales
 
                             # Botones para editar y borrar
                             col1, col2 = st.columns(2)
@@ -371,6 +378,11 @@ else:
                                         # Obtener los servicios disponibles
                                         ref_servicios = db.reference('servicios')
                                         servicios_disponibles = ref_servicios.get()
+
+                                        # Agregar campo para editar notas adicionales
+                                        notas_adicionales = st.text_area("Notas adicionales:", reserva['notas_adicionales'])
+                                        if not notas_adicionales:
+                                            notas_adicionales = "Sin detalles adicionales"
 
                                         # --- Inicializar servicios_seleccionados con los servicios de la reserva ---
                                         servicios_seleccionados_key = f"servicios_seleccionados_{reserva_id}"
@@ -398,7 +410,7 @@ else:
 
                                                 # --- Crear un diccionario con solo los campos modificados ---
                                                 datos_actualizados = {}
-                                                for campo in ["salon_key", "fecha", "hora_inicio", "hora_fin", "asistentes", "tipo_evento", "servicios"]:
+                                                for campo in ["salon_key", "fecha", "hora_inicio", "hora_fin", "asistentes", "tipo_evento", "servicios", "notas_adicionales"]:
                                                     nuevo_valor = locals()[campo]  # Obtener el valor de la variable local
                                                     if campo == "servicios":
                                                         nuevo_valor = servicios_seleccionados  # Usar el valor de servicios_seleccionados
