@@ -1,6 +1,6 @@
 import streamlit as st
 import uuid
-from firebase_admin import credentials, initialize_app, db
+from firebase_admin import credentials, initialize_app, db, auth
 from auth import sign_in, sign_out
 from utils import credenciales
 from datetime import datetime
@@ -122,13 +122,41 @@ st.write("Sistema de gestión integral para la Banquetería Hollan")
 
 # --- Autenticación ---
 if 'user_info' not in st.session_state:
-    st.write("Por favor, inicia sesión para continuar.")
+    st.write("Por favor, inicia sesión o crea una cuenta para continuar.")
 
     col1,col2,col3 = st.columns([1,2,1])
     auth_form = col2.form(key='Authentication form',clear_on_submit=False)
     email = auth_form.text_input(label='Email')
     password = auth_form.text_input(label='Contraseña',type='password')
     auth_notification = col2.empty()
+
+    # --- Botón para crear cuenta ---
+    if col2.button("Crear Cuenta"):
+        st.session_state.mostrar_formulario_registro = True
+        st.rerun()
+
+    if 'mostrar_formulario_registro' in st.session_state and st.session_state.mostrar_formulario_registro:
+        with st.form("registro_form"):
+            st.header("Crear una nueva cuenta")
+            email_registro = st.text_input("Correo electrónico:")
+            password_registro = st.text_input("Contraseña:", type="password")
+
+            if st.form_submit_button("Registrarse"):
+                try:
+                    # Crear usuario en Firebase Authentication
+                    user = auth.create_user(
+                        email=email_registro,
+                        password=password_registro
+                    )
+
+                    # Establecer el rol del usuario como "client"
+                    auth.set_custom_user_claims(user.uid, {"rol": "client"})
+
+                    st.success("¡Cuenta creada con éxito! Ahora puedes iniciar sesión.")
+                    st.session_state.mostrar_formulario_registro = False  # Ocultar formulario de registro
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al crear la cuenta: {e}")
 
     if auth_form.form_submit_button(label='Iniciar Sesión',use_container_width=True,type='primary'):
         with auth_notification, st.spinner('Iniciando Sesión'):
